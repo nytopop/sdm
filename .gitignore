@@ -1,0 +1,11 @@
+dist*
+*.hi
+*.o
+.hsenv*
+.stack-work/
+.cabal-sandbox
+.DS_Store
+*.swp
+*~
+\#*
+ref/
