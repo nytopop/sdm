@@ -18,6 +18,7 @@ library
   exposed-modules:     Data.SDM.Encode
   build-depends:       base >= 4.7 && < 5
                      , random >= 1.1 && < 1.2
+                     , containers
   default-language:    Haskell2010
 
 source-repository head

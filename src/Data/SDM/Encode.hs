@@ -2,24 +2,26 @@
 -- scalar data.
 --
 module Data.SDM.Encode
-  ( FeatureSet
+  ( FSet
   , rLin
   , rLog
   , e1i
   , eNi
+  , fuseT
   , fuse
   ) where
 
-import Data.List
-
 --import Data.SpaceFillingCurve.Hilbert.Integer
+import qualified Data.Set as S
+import Data.Set (Set)
 import System.Random
 
--- | Represents a set of features.
-type FeatureSet = (Int, [Int])
+-- | Represents a set of features with an upper bound.
+data FSet =
+  FSet Int -- upper bound
+       (Set Int) -- active features
+  deriving (Show, Eq)
 
--- Pre-Processing
--- ****************************************************
 -- | Linearly resolve a list of values to a list of
 -- bucket indices based on a resolution r.
 rLin :: (RealFrac r) => r -> [r] -> [Int]
@@ -30,8 +32,6 @@ rLin r xs = map (\x -> round $ x / r) xs
 rLog :: (Floating a, RealFrac a) => a -> [a] -> [Int]
 rLog n xs = map (round . logBase n) xs
 
--- Encoding
--- ****************************************************
 -- | Random chunking.
 rblk :: Int -> Int -> [Int]
 rblk n s =
@@ -49,30 +49,26 @@ rand n x =
   in (rblk n blk) !! r
 
 -- | Encode an integer to a feature set.
-e1i :: Int -> Int -> FeatureSet
+e1i :: Int -> Int -> FSet
 e1i n x =
   let w = round $ (fromIntegral n) * 0.1
-  in (n, nub $ map (rand n) [x .. x + w])
+  in FSet n (S.fromList $ map (rand n) [x .. x + w])
 
 -- | Encode n integers to a feature set. The provided
 -- data is first mapped onto a single dimension through a 
 -- hilbert transform, then mapped onto feature space.
-eNi :: Int -> [Int] -> FeatureSet
+eNi :: Int -> [Int] -> FSet
 eNi n xs =
   let w = round $ (fromIntegral n) * 0.1
       h = sum -- hilbert 64
-  in (n, nub $ map (rand n) [h xs .. h xs + w])
+  in FSet n (S.fromList $ map (rand n) [h xs .. h xs + w])
 
--- Post-Processing
--- ****************************************************
--- | Fuse 2 feature sets.
-fuseT :: FeatureSet -> FeatureSet -> FeatureSet
-fuseT a b =
-  let aa = map (+ fst b) $ snd a
-  in (fst a + fst b, snd b ++ aa)
+-- | Fuse an FSet with another FSet.
+fuseT :: FSet -> FSet -> FSet
+fuseT (FSet ab axs) (FSet bb bxs) =
+  let aa = S.map (+ bb) axs
+  in FSet (ab + bb) (S.union aa bxs)
 
--- | Fuse multiple feature sets.
-fuse :: [FeatureSet] -> FeatureSet
-fuse xs =
-  let (n, xn) = foldr fuseT (0, []) xs
-  in (n, sort xn)
+-- | Fuse a list of FSets.
+fuse :: [FSet] -> FSet
+fuse xs = foldr fuseT (FSet 0 S.empty) xs
